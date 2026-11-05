@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生管理系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, "Microsoft YaHei", sans-serif;
+            background: #f0f2f5;
+            color: #333;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            padding: 20px 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .header h1 {
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #555;
+        }
+
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .form-row input {
+            flex: 1;
+            min-width: 140px;
+            padding: 10px 14px;
+            border: 1px solid #d9d9d9;
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-row input:focus {
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover {
+            opacity: 0.85;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: #fff;
+        }
+
+        .btn-danger {
+            background: #ff4d4f;
+            color: #fff;
+            padding: 6px 16px;
+            font-size: 13px;
+        }
+
+        .btn-refresh {
+            background: #52c41a;
+            color: #fff;
+            margin-bottom: 12px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 12px 10px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        th {
+            background: #fafafa;
+            font-weight: 600;
+            color: #555;
+        }
+
+        tr:hover {
+            background: #f9f9ff;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .msg {
+            padding: 10px 16px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .msg.success {
+            background: #f6ffed;
+            border: 1px solid #b7eb8f;
+            color: #52c41a;
+            display: block;
+        }
+
+        .msg.error {
+            background: #fff2f0;
+            border: 1px solid #ffccc7;
+            color: #ff4d4f;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>🏫 培训机构学生管理系统</h1>
+</div>
+
+<div class="container">
+
+    <div class="card">
+        <div class="card-title">添加学生</div>
+        <div id="msg"></div>
+        <div class="form-row">
+            <input type="text" id="班级" placeholder="班级">
+            <input type="text" id="姓名" placeholder="姓名">
+            <input type="text" id="电话" placeholder="电话">
+            <input type="text" id="学校" placeholder="学校">
+        </div>
+        <div class="form-row">
+            <input type="text" id="作业情况" placeholder="作业情况">
+            <input type="text" id="课堂评价" placeholder="课堂评价">
+            <input type="text" id="测试成绩" placeholder="测试成绩">
+            <button class="btn btn-primary" onclick="addStudent()">添加</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">学生列表</div>
+        <button class="btn btn-refresh" onclick="loadStudents()">🔄 刷新</button>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>班级</th>
+                    <th>姓名</th>
+                    <th>电话</th>
+                    <th>学校</th>
+                    <th>作业情况</th>
+                    <th>课堂评价</th>
+                    <th>测试成绩</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+        </table>
+        <div id="empty" class="empty">暂无数据</div>
+    </div>
+
+</div>
+
+<script>
+    const API = "http://127.0.0.1:8000";
+
+    async function loadStudents() {
+        try {
+            const res = await fetch(API + "/students");
+            const list = await res.json();
+            const tbody = document.getElementById("tbody");
+            const empty = document.getElementById("empty");
+
+            tbody.innerHTML = "";
+
+            if (list.length === 0) {
+                empty.style.display = "block";
+                return;
+            }
+
+            empty.style.display = "none";
+
+            list.forEach(item => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${item.id}</td>
+                    <td>${item.班级}</td>
+                    <td>${item.姓名}</td>
+                    <td>${item.电话}</td>
+                    <td>${item.学校}</td>
+                    <td>${item.作业情况}</td>
+                    <td>${item.课堂评价}</td>
+                    <td>${item.测试成绩}</td>
+                    <td><button class="btn btn-danger" onclick="deleteStudent(${item.id})">删除</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (e) {
+            showMsg("加载失败，请确认后端已启动", "error");
+        }
+    }
+
+    async function addStudent() {
+        const data = {
+            班级: document.getElementById("班级").value,
+            姓名: document.getElementById("姓名").value,
+            电话: document.getElementById("电话").value,
+            学校: document.getElementById("学校").value,
+            作业情况: document.getElementById("作业情况").value,
+            课堂评价: document.getElementById("课堂评价").value,
+            测试成绩: document.getElementById("测试成绩").value
+        };
+
+        if (!data.姓名 || !data.电话) {
+            showMsg("姓名和电话不能为空", "error");
+            return;
+        }
+
+        try {
+            const res = await fetch(API + "/students", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            showMsg(result.message || "添加成功", "success");
+            clearForm();
+            loadStudents();
+        } catch (e) {
+            showMsg("添加失败，请确认后端已启动", "error");
+        }
+    }
+
+    async function deleteStudent(id) {
+        if (!confirm("确定删除该学生吗？")) return;
+
+        try {
+            await fetch(API + "/students/" + id, { method: "DELETE" });
+            showMsg("删除成功", "success");
+            loadStudents();
+        } catch (e) {
+            showMsg("删除失败", "error");
+        }
+    }
+
+    function clearForm() {
+        ["班级", "姓名", "电话", "学校", "作业情况", "课堂评价", "测试成绩"]
+            .forEach(id => document.getElementById(id).value = "");
+    }
+
+    function showMsg(text, type) {
+        const msg = document.getElementById("msg");
+        msg.textContent = text;
+        msg.className = "msg " + type;
+        setTimeout(() => msg.className = "msg", 3000);
+    }
+
+    loadStudents();
+</script>
+
+</body>
+</html>
